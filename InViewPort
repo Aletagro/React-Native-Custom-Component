@@ -1,0 +1,66 @@
+// Компонент-обертка, определяет находятся ли компоненты-дети в зоне видимости
+import React, {PureComponent} from 'react'
+import {View, Dimensions} from 'react-native'
+
+import round from 'lodash/round'
+
+type Props = {
+  children: any,
+  onChange: () => void,
+  delay?: number,
+  isDisabled?: boolean
+}
+
+class InViewPort extends PureComponent<Props> {
+  static defaultProps = {
+    delay: 1000
+  }
+
+  componentWillUnmount () {
+    clearInterval(this.interval)
+  }
+
+  viewRef: Object
+  interval: IntervalID
+
+  lastValue = false
+  rectTop = 0
+  rectBottom = 0
+  rectWidth = 0
+
+  window = Dimensions.get('window')
+
+  handleMeasureInWindow = (x: number, y: number, width: number, height: number) => {
+    this.rectTop = y
+    this.rectBottom = y + height
+    this.rectWidth = x + width
+  }
+
+  handleLayout = () => {
+    this.interval = setInterval(this.check, this.props.delay)
+  }
+
+  check = () => {
+    if (!this.props.isDisabled) {
+      this.viewRef.measureInWindow(this.handleMeasureInWindow)
+      const isVisible =
+      this.rectBottom !== 0 && this.rectTop >= 0 && this.rectBottom <= this.window.height &&
+        // round используется потому что есть старые устройства, на который немного не правильно расчитывается ширина
+        this.rectWidth > 0 && round(this.rectWidth, 3) <= round(this.window.width, 3)
+      if (this.lastValue !== isVisible) {
+        this.lastValue = isVisible
+        this.props.onChange()
+      }
+    }
+  }
+
+  ref = (ref: any) => this.viewRef = ref
+
+  render () {
+    return <View ref={this.ref} onLayout={this.handleLayout}>
+      {this.props.children}
+    </View>
+  }
+}
+
+export default InViewPort
