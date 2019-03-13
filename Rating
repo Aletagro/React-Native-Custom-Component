@@ -1,0 +1,55 @@
+// @flow
+
+import React, {PureComponent} from 'react'
+import {View, Text, TouchableOpacity} from 'react-native'
+import {Star} from '../Icons'
+import map from 'lodash/map'
+import Styles from './Styles/RatingStyle'
+import type {ViewStyleProp} from 'react-native/Libraries/StyleSheet/StyleSheet'
+
+type Props = {
+  style?: ViewStyleProp,
+  commentsCount?: number,
+  average: number,
+  onPress?: (rating: number) => void,
+  starStyle?: ViewStyleProp,
+  isBig: boolean
+}
+
+class Rating extends PureComponent<Props> {
+  static defaultProps = {
+    isBig: false
+  }
+
+  renderStar = (i: number) => {
+    const {average, onPress, starStyle, isBig} = this.props
+    const isFilled = i <= average
+    let isHalf = false
+    if (!isFilled && i - 1 < average) {
+      isHalf = true
+    }
+    return onPress
+      ? <TouchableOpacity
+        style={starStyle && i !== 5 ? starStyle : null}
+        // eslint-disable-next-line react/jsx-no-bind
+        onPress={() => onPress(i)}
+        key={i}
+        testID='star'
+      >
+        <Star key={i} isBig={isBig} isHalf={isHalf} isFilled={isFilled} />
+      </TouchableOpacity>
+      : <Star key={i} isBig={isBig} isHalf={isHalf} isFilled={isFilled} />
+  }
+
+  render () {
+    const {style, commentsCount} = this.props
+    return <View style={[Styles.container, style && style]}>
+      <View style={Styles.row}>
+        {map([1, 2, 3, 4, 5], this.renderStar)}
+      </View>
+      {commentsCount ? <Text style={Styles.text}> {commentsCount}</Text> : null}
+    </View>
+  }
+}
+
+export default Rating
