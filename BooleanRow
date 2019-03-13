@@ -1,0 +1,189 @@
+// @flow
+import React, {PureComponent} from 'react'
+import {View, TouchableOpacity, Text, Switch, Platform} from 'react-native'
+import Styles, {switchTintColor} from './Styles/BooleanRowStyle'
+import RadioButton from './Gears/RadioButton'
+import Checkbox from './Gears/Checkbox'
+import {CheckmarkOutline, RoundCheckMark, SquareCheckMark} from '../Icons'
+import constant from 'lodash/constant'
+import type {ViewStyleProp, TextStyleProp} from 'react-native/Libraries/StyleSheet/StyleSheet'
+
+type Props = {
+  title: string,
+  subTitle?: string,
+  description?: string,
+  checked?: boolean,
+  onCheckedChange?: (isChecked: boolean) => void,
+  onPress?: () => void,
+  onPressIcon?: () => any,
+  style?: ViewStyleProp,
+  titleStyle?: TextStyleProp,
+  descriptionStyle?: TextStyleProp,
+  subTitleStyle?: ViewStyleProp,
+  touchableStyle?: ViewStyleProp,
+  icon?: ?Object,
+  type?: 'switch' | 'radiobutton' | 'checkbox' | 'checkmark' | 'roundCheckmark' | 'descriptionCheckmark',
+  disabled?: boolean,
+  left?: boolean,
+  isIconLeft?: boolean,
+  iconStyle?: ViewStyleProp,
+  testID?: string,
+  accessibilityLabel?: string,
+  titleComponentStyle?: ViewStyleProp
+}
+
+class BooleanRow extends PureComponent<Props> {
+  handleCheckedChange = (isChecked: boolean = true) => {
+    const {onCheckedChange} = this.props
+    if (onCheckedChange) {
+      onCheckedChange(isChecked)
+    }
+  }
+
+  render () {
+    const {
+      title,
+      subTitle,
+      description,
+      checked = false,
+      onCheckedChange,
+      onPress,
+      onPressIcon,
+      style,
+      titleStyle,
+      descriptionStyle,
+      subTitleStyle,
+      touchableStyle,
+      icon,
+      type = 'switch',
+      disabled = false,
+      left = false,
+      accessibilityLabel,
+      testID = 'booleanRow',
+      isIconLeft = false,
+      iconStyle,
+      titleComponentStyle
+    } = this.props
+
+    const _containerStyle = [Styles.container, style]
+    const _titleStyle = [Styles.title, titleStyle]
+    const _descriptionStyle = [Styles.description, descriptionStyle]
+    const _subTitleStyle = [Styles.subTitle, subTitleStyle]
+    const _titleComponentStyle = [Styles.titleComponent, titleComponentStyle]
+
+    const titleComponent =
+      <View style={_titleComponentStyle}>
+        <Text style={_titleStyle}>{title}</Text>
+        {type !== 'descriptionCheckmark' ? <Text style={_descriptionStyle}>{description}</Text> : null}
+      </View>
+
+    let booleanComponent = null
+
+    let _onPress = onPress || null
+    let CheckmarkComponent = constant(null)
+
+    switch (type) {
+    case 'checkmark':
+      _onPress = () => onCheckedChange && onCheckedChange(!checked)
+      booleanComponent = <View style={Styles.checkmarkContainer} testID={`${testID}Checked`}>
+          {checked
+            ? <CheckmarkOutline style={[Styles.boolean, Styles.checkmark, left && Styles.left]} />
+            : null
+          }
+        </View>
+      break
+    case 'checkbox':
+      if (!onPress && onCheckedChange) {
+        _onPress = () => onCheckedChange && onCheckedChange(!checked)
+      }
+      booleanComponent = <Checkbox
+          style={[Styles.boolean, Styles.checkbox, left && Styles.left]}
+          onCheckedChange={this.handleCheckedChange}
+          isChecked={checked}
+          isDisabled={disabled}
+        />
+      break
+    case 'radiobutton':
+      _onPress = () => {
+        if (onPress) {
+          onPress()
+        }
+        if (onCheckedChange) {
+          onCheckedChange(true)
+        }
+      }
+      booleanComponent = <RadioButton
+          style={[Styles.boolean, Styles.radiobutton, left && Styles.left]}
+          onChange={this.handleCheckedChange}
+          checked={checked}
+          disabled={disabled}
+        />
+      break
+    case 'roundCheckmark':
+      _onPress = () => onCheckedChange && onCheckedChange(!checked)
+      booleanComponent = <View style={Styles.checkmarkContainer} testID={`${testID}Checked`}>
+          {
+            Platform.OS === 'ios'
+              ? <RoundCheckMark isChecked={checked} />
+              : <SquareCheckMark isChecked={checked} />
+          }
+        </View>
+      break
+    case 'descriptionCheckmark':
+      _onPress = () => onCheckedChange && onCheckedChange(!checked)
+      CheckmarkComponent = Platform.OS === 'ios' ? CheckmarkOutline : Checkbox
+      booleanComponent = <View style={Styles.descriptionCheckmarkContainer} testID={`${testID}Checked`}>
+          {checked
+            ? <CheckmarkComponent
+                style={[Styles.boolean, Styles.checkmark, left && Styles.left]}
+                isChecked={checked}
+                onCheckedChange={_onPress}
+              />
+            : <Text style={_descriptionStyle}>{description}</Text>
+          }
+        </View>
+      break
+    case 'switch':
+    default:
+      booleanComponent = <Switch
+          style={[Styles.boolean, Styles.switch, left && Styles.left]}
+          trackColor={{true: switchTintColor}}
+          disabled={disabled}
+          onValueChange={this.handleCheckedChange}
+          value={checked}
+          testID='rowSwitch' />
+      break
+    }
+
+    const subTitleComponent = subTitle ? <Text style={_subTitleStyle}>{subTitle}</Text> : null
+
+    const _iconComponent = icon
+      ? <View style={Styles.iconContainer}>
+        <TouchableOpacity style={iconStyle || Styles.icon} onPress={onPressIcon} disabled={!onPressIcon} testID={`${testID}Icon`}>
+          {icon}
+        </TouchableOpacity>
+      </View>
+      : null
+
+    return (
+      <View style={_containerStyle}>
+        <TouchableOpacity
+          style={[Styles.touchable, touchableStyle]}
+          testID={testID}
+          onPress={_onPress}
+          disabled={!_onPress || disabled}
+          accessibilityLabel={accessibilityLabel}>
+          {left && booleanComponent}
+          {isIconLeft ? _iconComponent : null}
+          <View style={Styles.textContainer}>
+            {titleComponent}
+            {subTitleComponent}
+          </View>
+          {!left && booleanComponent}{isIconLeft ? null :_iconComponent}
+        </TouchableOpacity>
+      </View>
+    )
+  }
+}
+
+export default BooleanRow
