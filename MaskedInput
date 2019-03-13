@@ -1,0 +1,137 @@
+// Компонент маскированного инпута. Не содержит стилей итп, только логику работы с масками
+
+import React, {PureComponent} from 'react'
+import {TextInput} from 'react-native'
+import split from 'lodash/split'
+import join from 'lodash/join'
+import forEach from 'lodash/forEach'
+import type {ViewStyleProp} from 'react-native/Libraries/StyleSheet/StyleSheet'
+
+// Преобразовываем значения ввода в маскированное значение посимвольно
+const transformTextToMasked = (valueChars: string[], maskChars: string[], translation: TranslationTransform) => {
+  const resultArray = []
+  forEach(maskChars, (maskCh) => {
+    const translateFn = translation[maskCh]
+    // Если не осталось введённых символов, то в вывод ничего не добавляем
+    if (valueChars.length === 0) {
+      return
+    }
+
+    // если первый символ совпадает с маской то мы берём его в вывод (вычленяем префикс)
+    if (valueChars[0] === maskCh) {
+      return resultArray.push(valueChars.shift())
+    }
+
+    // Преобразование символа по маске если есть функция-преобразователь
+    if (translateFn) {
+      return resultArray.push(translateFn(valueChars.shift()))
+    }
+
+    resultArray.push(maskCh)
+  })
+  return resultArray
+}
+
+// В функцию должно приходить value после getRawValue(props.value)
+export const maskText = (value: string, mask: string, translation: TranslationTransform) => {
+  const maskChars = split(mask, '')
+  const valueChars = split(value, '')
+  const maskedChars = transformTextToMasked(valueChars, maskChars, translation)
+  return join(maskedChars, '')
+}
+
+/**
+ * Функции для трансформации спецсимволов маски
+ *
+ * Пример:
+ * {
+ *  '#': (val) => val.replace(/[^0-9]+/g, '')
+ * }
+ * */
+export type TranslationTransform = {
+  [char: string]: (value: string) => ?string
+}
+
+type Props = {
+  mask: string,
+  placeholder: string,
+  translation: TranslationTransform,
+  getRawValue: (value: string) => string,
+  onFocus?: () => void,
+  onBlur?: () => void,
+  onChangeText: (value: string) => void,
+  blurOnSubmit?: boolean,
+  keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad',
+  returnKeyType?: 'done' | 'go' | 'next' | 'search' | 'send',
+  underlineColorAndroid?: string,
+  value: string,
+  style?: ViewStyleProp,
+  testID?: string,
+  accessibilityLabel?: string
+}
+
+type State = {
+  value: string
+}
+
+class MaskedInput extends PureComponent<Props, State> {
+  state = {
+    value: ''
+  }
+
+  componentDidMount() {
+    this.setState({
+      value: maskText(this.props.getRawValue(this.props.value), this.props.mask, this.props.translation)
+    })
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    if (prevProps.value !== this.props.value) {
+      this.setState({
+        value: maskText(this.props.getRawValue(this.props.value), this.props.mask, this.props.translation)
+      })
+    }
+  }
+
+  handleTextChange = (value: string) => {
+    const rawValue = this.props.getRawValue(value)
+    const maskedValue = maskText(rawValue, this.props.mask, this.props.translation)
+    this.setState({value: maskedValue}, () => this.props.onChangeText(maskedValue))
+  }
+
+  render () {
+    const {
+      onFocus,
+      onBlur,
+      mask,
+      blurOnSubmit,
+      keyboardType,
+      returnKeyType,
+      underlineColorAndroid,
+      placeholder,
+      style,
+      testID,
+      accessibilityLabel
+    } = this.props
+
+    const {value} = this.state
+
+    return <TextInput
+      value={value}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      onChangeText={this.handleTextChange}
+      blurOnSubmit={blurOnSubmit}
+      keyboardType={keyboardType}
+      returnKeyType={returnKeyType}
+      maxLength={mask.length}
+      underlineColorAndroid={underlineColorAndroid}
+      placeholder={placeholder}
+      style={style}
+      testID={testID}
+      accessibilityLabel={accessibilityLabel}
+    />
+  }
+}
+
+export default MaskedInput
